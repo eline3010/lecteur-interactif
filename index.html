@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecteur Interactif - Analyse de Précision</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 15px 25px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-btn:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .text-card {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .text-to-read {
+            font-size: 20px;
+            line-height: 1.8;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .text-to-read .word {
+            display: inline;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+
+        .text-to-read .word.current {
+            background: #fff3cd;
+            font-weight: 600;
+        }
+
+        .text-to-read .word.correct {
+            background: #d4edda;
+        }
+
+        .text-to-read .word.incorrect {
+            background: #f8d7da;
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .difficulty-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .difficulty-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .recording-indicator.active {
+            display: flex;
+        }
+
+        .pulse {
+            width: 20px;
+            height: 20px;
+            background: #dc3545;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .results-card {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .results-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+
+        .metric-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .metric-value {
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .progress-bar {
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .history-item {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .chart-container {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .chart-container h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .feedback {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .feedback-positive {
+            border-left: 4px solid #28a745;
+        }
+
+        .feedback-warning {
+            border-left: 4px solid #ffc107;
+        }
+
+        .tips {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .tips h4 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+
+        .tips ul {
+            margin-left: 20px;
+        }
+
+        .tips li {
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .control-buttons {
+                flex-direction: column;
+            }
+            
+            .difficulty-selector {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 Lecteur Interactif</h1>
+            <p>Analyse de la précision en lecture - Identifie les mots difficiles</p>
+        </div>
+
+        <div class="content">
+            <!-- Bannière d'avertissement pour les permissions -->
+            <div id="permissionBanner" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: none;">
+                <h3 style="color: #856404; margin-bottom: 10px;">⚠️ Permissions requises</h3>
+                <p style="color: #856404; margin-bottom: 15px;">
+                    Cette application a besoin d'accéder à ton microphone pour fonctionner.
+                </p>
+                <p style="color: #856404; margin-bottom: 15px;">
+                    <strong>Important :</strong> Quand tu cliques sur "Tester mon microphone" ou "Commencer la lecture", 
+                    ton navigateur va afficher une petite fenêtre en haut de la page te demandant d'autoriser l'accès au microphone.
+                </p>
+                <p style="color: #856404; margin-bottom: 15px;">
+                    👉 <strong>Tu DOIS cliquer sur "Autoriser" ou "Allow"</strong> pour que l'application puisse t'écouter lire.
+                </p>
+                <button onclick="document.getElementById('permissionBanner').style.display='none'" 
+                        style="background: #ffc107; color: #333; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    J'ai compris
+                </button>
+            </div>
+
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('lecture')">📖 Lecture</button>
+                <button class="tab-btn" onclick="switchTab('resultats')">📊 Résultats</button>
+                <button class="tab-btn" onclick="switchTab('progres')">📈 Progrès</button>
+            </div>
+
+            <!-- Onglet Lecture -->
+            <div id="lecture-tab" class="tab-content active">
+                <div class="text-card">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">Choisis le niveau de difficulté :</h3>
+                    <div class="difficulty-selector">
+                        <button class="difficulty-btn active" onclick="selectDifficulty('facile')">⭐ Facile (CP-CE1)</button>
+                        <button class="difficulty-btn" onclick="selectDifficulty('moyen')">⭐⭐ Moyen (CE2)</button>
+                        <button class="difficulty-btn" onclick="selectDifficulty('difficile')">⭐⭐⭐ Difficile (CM1-CM2)</button>
+                    </div>
+                </div>
+
+                <div class="text-card">
+                    <h3 style="color: #667eea; margin-bottom: 20px;">Texte à lire :</h3>
+                    <div class="text-to-read" id="textToRead"></div>
+                    
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #ffc107;">
+                        <h4 style="color: #856404; margin-bottom: 10px;">💡 Avant de commencer :</h4>
+                        <ul style="margin-left: 20px; color: #856404;">
+                            <li>Assure-toi d'être dans un endroit calme</li>
+                            <li>Parle clairement et pas trop vite</li>
+                            <li>Tiens-toi près du microphone</li>
+                            <li>Autorise l'accès au micro quand ton navigateur te le demande</li>
+                        </ul>
+                        <button class="btn btn-secondary" onclick="testMicrophone()" style="margin-top: 10px; font-size: 14px; padding: 10px 15px;">
+                            🎤 Tester mon microphone
+                        </button>
+                    </div>
+                </div>
+
+                <div class="recording-indicator" id="recordingIndicator">
+                    <div class="pulse"></div>
+                    <span style="font-weight: 600;">🎤 Enregistrement en cours... Lis le texte à voix haute</span>
+                </div>
+
+                <div class="control-buttons">
+                    <button class="btn btn-primary" id="startBtn" onclick="startReading()">
+                        🎤 Commencer la lecture
+                    </button>
+                    <button class="btn btn-danger" id="stopBtn" onclick="stopReading()" disabled>
+                        ⏹️ Terminer
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadNewText()">
+                        🔄 Nouveau texte
+                    </button>
+                </div>
+
+                <div class="results-card" id="currentResults" style="display: none;">
+                    <h3>📊 Résultats de cette lecture</h3>
+                    <div id="sessionResults"></div>
+                </div>
+            </div>
+
+            <!-- Onglet Résultats -->
+            <div id="resultats-tab" class="tab-content">
+                <div class="stats-grid" id="overallStats"></div>
+                <div id="lastSessionDetails"></div>
+            </div>
+
+            <!-- Onglet Progrès -->
+            <div id="progres-tab" class="tab-content">
+                <div class="chart-container">
+                    <h3>📊 Évolution sur les Textes d'Évaluation</h3>
+                    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                        Ces textes de référence sont relus régulièrement pour mesurer objectivement tes progrès
+                    </p>
+                    <canvas id="evaluationChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>📈 Moyenne Générale de Précision</h3>
+                    <canvas id="progressChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3>📊 Répartition des Types de Textes</h3>
+                    <canvas id="textTypeChart"></canvas>
+                </div>
+
+                <div class="chart-container">
+                    <h3>🎯 Textes à Retravailler</h3>
+                    <div id="difficultTextsList"></div>
+                </div>
+
+                <div class="chart-container">
+                    <h3>📜 Historique des Séances</h3>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Textes de lecture par niveau - bibliothèque enrichie
+        const texts = {
+            facile: [
+                // Phrases simples sur la vie quotidienne (20)
+                "Le chat est sur le tapis. Il dort au soleil. Il est tout doux.",
+                "Papa lit un livre. Maman fait un gâteau. Je joue avec mon ballon.",
+                "Dans le jardin, il y a des fleurs. Les fleurs sont jolies. J'aime les roses rouges.",
+                "Mon ami s'appelle Tom. Il a un vélo bleu. Nous allons au parc ensemble.",
+                "Le soleil brille dans le ciel. Les oiseaux chantent. C'est une belle journée.",
+                "J'ai un chien qui s'appelle Max. Il aime courir dans le jardin. Je joue avec lui tous les jours.",
+                "Ma sœur dessine une maison. Elle met des fenêtres et une porte. C'est très joli.",
+                "Il y a un arbre dans la cour. Les enfants jouent sous l'arbre. Ils rient beaucoup.",
+                "Le chat boit du lait. Il mange des croquettes. Puis il se lave les pattes.",
+                "J'aime les pommes rouges. Je mange une pomme à la récré. C'est bon et sucré.",
+                "La pluie tombe sur le toit. J'entends les gouttes d'eau. Je reste au chaud à la maison.",
+                "Mon cartable est lourd. Il y a des livres dedans. Je le porte sur mon dos.",
+                "Le poisson nage dans l'eau. Il fait des bulles. Il est orange et blanc.",
+                "Ma maman fait du pain. Ça sent très bon dans la cuisine. J'ai très faim.",
+                "Le petit oiseau vole dans le ciel. Il cherche des graines. Il se pose sur une branche.",
+                "J'ai une poupée qui s'appelle Lisa. Elle a une robe rose. Je l'aime beaucoup.",
+                "Le bus arrive à l'école. Les enfants montent dedans. Le chauffeur dit bonjour.",
+                "Mon papa joue au ballon avec moi. Il lance le ballon très haut. Je cours pour l'attraper.",
+                "Il fait froid dehors. Je mets mon manteau et mon écharpe. Mes mains sont bien au chaud.",
+                "La maîtresse lit une histoire. Tous les enfants écoutent. C'est l'histoire d'un lion.",
+                
+                // Phrases sur les animaux (15)
+                "Le lapin mange des carottes. Il a de grandes oreilles. Il saute dans l'herbe.",
+                "La vache fait meuh. Elle donne du lait. Elle vit dans un pré.",
+                "Le coq chante le matin. Cocorico ! Il réveille toute la ferme.",
+                "La souris est petite. Elle court très vite. Elle a une longue queue.",
+                "Le canard nage sur l'étang. Il a des plumes jaunes. Il fait coin-coin.",
+                "L'abeille fait du miel. Elle vole de fleur en fleur. Elle vit dans une ruche.",
+                "Le cheval galope dans le champ. Il est grand et fort. J'aime le regarder courir.",
+                "La poule pond des œufs. Elle les garde au chaud. Les poussins vont naître.",
+                "Le papillon a des ailes colorées. Il vole léger dans l'air. Il se pose sur une fleur.",
+                "L'escargot avance lentement. Il porte sa maison sur son dos. Il laisse une trace.",
+                "Le mouton a de la laine. Il vit avec les autres moutons. Le berger s'occupe de lui.",
+                "La coccinelle est rouge avec des points noirs. Elle grimpe sur ma main. Elle s'envole.",
+                "Le hérisson a des piquants. Il se roule en boule. Il dort l'hiver.",
+                "La tortue marche doucement. Elle a une carapace dure. Elle vit très longtemps.",
+                "Le cochon est rose. Il aime se rouler dans la boue. Il grogne fort.",
+                
+                // Phrases sur les saisons et la nature (15)
+                "En automne, les feuilles tombent. Elles sont jaunes et rouges. J'aime marcher dessus.",
+                "En hiver, il neige. Les flocons sont blancs. Je fais un bonhomme de neige.",
+                "Au printemps, les fleurs poussent. Les arbres ont des bourgeons. Tout redevient vert.",
+                "En été, il fait chaud. Je vais à la plage. Je me baigne dans la mer.",
+                "Le vent souffle fort. Les branches bougent. Mon chapeau s'envole.",
+                "L'arc-en-ciel a sept couleurs. Il apparaît après la pluie. C'est magique.",
+                "Les nuages sont dans le ciel. Ils sont blancs et gris. Parfois ils cachent le soleil.",
+                "La lune brille la nuit. Les étoiles scintillent. C'est joli dans le noir.",
+                "La rivière coule doucement. L'eau est fraîche. Des petits poissons nagent dedans.",
+                "La montagne est très haute. Il y a de la neige au sommet. C'est beau à regarder.",
+                "Le jardin est fleuri. Il y a des tulipes et des marguerites. Ça sent bon.",
+                "L'herbe est verte et douce. Je m'allonge dessus. Je regarde les nuages.",
+                "Les champignons poussent en forêt. Certains sont rouges. Il ne faut pas les manger.",
+                "Le soleil se lève le matin. Il se couche le soir. La journée commence et se termine.",
+                "L'orage gronde. On entend le tonnerre. Je vois les éclairs dans le ciel."
+            ],
+            
+            moyen: [
+                // Récits du quotidien (15)
+                "Léa adore les animaux. Chaque mercredi, elle va à la ferme avec son grand-père. Elle donne à manger aux poules et aux lapins. C'est son moment préféré de la semaine.",
+                "Dans la forêt, les arbres sont très hauts. Les écureuils sautent de branche en branche. Parfois, on peut voir des biches qui se promènent tranquillement.",
+                "Pierre collectionne les cailloux. Il a trouvé un cristal brillant près de la rivière. C'est son plus beau trésor. Il le montre fièrement à tous ses amis.",
+                "La bibliothèque du quartier est immense. Marie y va tous les samedis. Elle emprunte des livres d'aventures et de sciences. La bibliothécaire est très gentille.",
+                "Pendant les vacances, nous sommes allés à la mer. J'ai construit un château de sable énorme. Les vagues venaient doucement le mouiller. C'était magnifique.",
+                "Ce matin, j'ai raté le bus scolaire. J'ai dû courir jusqu'à l'arrêt suivant. Heureusement, le chauffeur m'a attendu. J'étais essoufflé mais content.",
+                "Ma grand-mère prépare les meilleures crêpes du monde. Elle les fait sauter dans la poêle. J'adore les regarder tourner dans les airs avant de retomber.",
+                "Le nouveau voisin a un perroquet vert. L'oiseau répète tout ce qu'on lui dit. Hier, il a appris à dire mon prénom. C'était très drôle.",
+                "Au marché, il y a plein de couleurs et d'odeurs. Le marchand de fruits crie pour vendre ses oranges. Ma mère achète toujours des fraises quand c'est la saison.",
+                "Mon petit frère a perdu sa première dent. Il l'a mise sous son oreiller. Le lendemain matin, il a trouvé une pièce. Il était fou de joie.",
+                "La classe est partie en sortie au musée. Nous avons vu des tableaux très anciens. La guide nous a raconté l'histoire de chaque peintre. C'était passionnant.",
+                "Papa a installé une cabane dans le jardin. Mes amis et moi, on y joue aux explorateurs. On imagine qu'on est sur une île déserte.",
+                "Tous les dimanches, je vais chez ma tante. Elle habite une petite maison à la campagne. On se promène dans les champs et on cueille des mûres.",
+                "Le chat du voisin vient souvent dormir sur notre terrasse. Il se met au soleil et ronronne doucement. Parfois, je le caresse et il se frotte contre ma jambe.",
+                "Hier soir, j'ai regardé un film d'animation avec ma famille. C'était l'histoire d'un robot qui voulait devenir humain. À la fin, tout le monde a pleuré.",
+                
+                // Descriptions et récits imaginaires (20)
+                "Le dragon vivait au sommet d'une montagne. Il gardait un trésor précieux dans sa grotte. Personne n'osait s'approcher car il crachait du feu. Mais il était moins méchant qu'on le pensait.",
+                "La princesse habitait dans un château entouré de douves. Elle passait ses journées à lire dans la bibliothèque. Un jour, elle décida de partir à l'aventure déguisée en paysanne.",
+                "Le magicien avait une longue barbe blanche et un chapeau pointu. Il préparait des potions dans son laboratoire secret. Ses sorts ne fonctionnaient pas toujours comme prévu.",
+                "Au fond de l'océan vivait une sirène curieuse. Elle collectionnait des objets venus de la surface. Son rêve était de marcher sur la terre ferme.",
+                "Le petit robot ne savait pas pleurer ni rire. Il observait les humains avec curiosité. Il voulait comprendre ce que c'était que d'avoir des émotions.",
+                "Dans la forêt enchantée, les arbres parlaient entre eux. Les fées dansaient autour des champignons géants. Les animaux comprenaient le langage des humains.",
+                "Le vieux sage habitait au sommet de la colline. Les gens venaient de loin pour lui demander conseil. Il répondait toujours par des énigmes.",
+                "L'apprenti cuisinier rêvait de devenir le meilleur chef du royaume. Il s'entraînait tous les jours à préparer de nouvelles recettes. Son plat préféré était la tarte aux pommes.",
+                "Le petit renard rusé voulait voler les poules du fermier. Mais le chien de garde était malin et veillait. Chaque nuit, c'était un nouveau stratagème.",
+                "La sorcière n'était pas méchante contrairement à ce que tout le monde croyait. Elle soignait les animaux malades et cultivait des plantes magiques dans son jardin secret.",
+                "Le pirate avait caché son trésor sur une île déserte. Il avait dessiné une carte avec des indices mystérieux. Mais il avait oublié où il l'avait cachée.",
+                "L'astronaute explorait une planète inconnue. Le sol était violet et le ciel orange. Des créatures étranges le regardaient avec curiosité depuis les rochers.",
+                "Le détective cherchait des indices pour résoudre l'énigme. Qui avait volé les biscuits dans la cuisine ? Tous les indices menaient au chat de la maison.",
+                "La fée des dents travaillait toute la nuit. Elle devait récupérer les dents sous les oreillers et laisser des pièces. C'était un travail fatigant mais important.",
+                "Le fantôme du château était timide. Il ne voulait pas faire peur aux visiteurs. Il se cachait dans les coins sombres et faisait de petits bruits discrets.",
+                "Le géant était si grand qu'il touchait les nuages. Pourtant, il était très doux et adorait les petites créatures. Il aidait les oiseaux à construire leurs nids.",
+                "La musicienne jouait du violon sur la place du village. Les gens s'arrêtaient pour l'écouter. Sa musique était si belle qu'elle faisait danser les oiseaux.",
+                "Le jardinier connaissait tous les secrets des plantes. Il leur parlait chaque matin et elles poussaient magnifiquement. Son jardin était le plus beau de la région.",
+                "L'inventeur créait des machines extraordinaires dans son atelier. Son dernier projet était une bicyclette qui pouvait voler. Il ne lui manquait plus que les ailes.",
+                "Le photographe parcourait le monde pour capturer des images rares. Il avait déjà visité cinquante pays. Son appareil photo était son meilleur ami.",
+                
+                // Petites leçons de vie et morales (15)
+                "Mon ami Lucas m'a aidé à réviser mes leçons. Grâce à lui, j'ai eu une bonne note au contrôle. C'est important d'aider les autres quand ils en ont besoin.",
+                "J'ai trouvé un portefeuille par terre. Il y avait de l'argent dedans. Je l'ai rapporté au bureau des objets trouvés. La dame était très contente.",
+                "Ma petite sœur pleurait parce qu'elle avait perdu son doudou. Toute la famille l'a cherché. On l'a retrouvé sous le canapé. Elle était tellement heureuse.",
+                "J'avais peur de plonger du grand plongeoir. Mon entraîneur m'a encouragé. J'ai pris mon courage à deux mains et j'ai sauté. J'étais fier de moi.",
+                "Le nouveau élève était tout seul dans la cour. Je suis allé lui parler et je l'ai présenté à mes amis. Maintenant, on joue ensemble tous les jours.",
+                "J'ai cassé le vase préféré de maman en jouant au ballon. J'avais peur de lui dire. Mais j'ai avoué la vérité. Elle n'était pas contente mais elle m'a pardonné.",
+                "Mon chien était malade et le vétérinaire a dit qu'il fallait le soigner. J'ai économisé mon argent de poche pour payer les médicaments. Maintenant, il va beaucoup mieux.",
+                "J'ai vu un enfant se faire embêter par des plus grands. Je suis allé chercher un adulte pour l'aider. Ce n'est pas bien de rester sans rien faire.",
+                "Ma mamie m'a appris à tricoter. Au début, c'était difficile et je voulais abandonner. Mais j'ai continué à m'entraîner. Maintenant, je sais faire une écharpe.",
+                "J'ai perdu la finale du tournoi de tennis. J'étais très déçu. Mon papa m'a dit que l'important c'est de faire de son mieux. J'ai compris qu'on ne peut pas toujours gagner.",
+                "Mon voisin âgé portait des sacs lourds. Je lui ai proposé de l'aider. Il m'a remercié avec un grand sourire. Ça fait du bien d'aider les personnes âgées.",
+                "J'ai menti à la maîtresse sur mes devoirs. Toute la journée, je me suis senti mal. Le soir, j'ai avoué la vérité. Elle m'a puni mais j'étais soulagé.",
+                "Ma meilleure amie a déménagé dans une autre ville. Au début, j'étais triste. Mais on s'écrit des lettres et on se téléphone. L'amitié reste même à distance.",
+                "J'ai voulu apprendre à faire du vélo sans petites roues. Je suis tombé plusieurs fois. Mais je me suis relevé à chaque fois. Maintenant, je roule sans problème.",
+                "Mon frère et moi, on se dispute souvent pour des bêtises. Mais quand l'un de nous a un problème, l'autre est toujours là pour aider. C'est ça, la famille."
+            ],
+            
+            difficile: [
+                // Sciences et découvertes (15)
+                "L'exploration spatiale fascine les scientifiques depuis des décennies. Les astronautes s'entraînent pendant des années avant de partir en mission. Ils doivent apprendre à vivre en apesanteur et à résoudre des problèmes complexes dans des situations d'urgence.",
+                "Les volcans sont des montagnes particulières qui peuvent entrer en éruption. Le magma, cette roche en fusion venue des profondeurs de la Terre, remonte à la surface. Quand il jaillit, on l'appelle de la lave. Les éruptions volcaniques peuvent être spectaculaires mais aussi dangereuses.",
+                "La photosynthèse est un phénomène extraordinaire. Grâce à la lumière du soleil, les plantes transforment le dioxyde de carbone en oxygène. Ce processus est essentiel à la vie sur Terre car il permet de purifier l'air que nous respirons.",
+                "Les migrations des oiseaux restent mystérieuses. Chaque année, certaines espèces parcourent des milliers de kilomètres. Elles traversent des océans et des continents pour retrouver des climats plus cléments. Leur sens de l'orientation est remarquable.",
+                "Le cycle de l'eau est un processus naturel fascinant. L'eau s'évapore des océans, forme des nuages, puis retombe en pluie. Cette eau rejoint ensuite les rivières qui retournent à la mer. Ce cycle se répète indéfiniment.",
+                "Les dinosaures ont dominé la Terre pendant plus de cent soixante millions d'années. Certains étaient herbivores et se nourrissaient de plantes. D'autres étaient de redoutables prédateurs. Ils ont mystérieusement disparu il y a soixante-cinq millions d'années.",
+                "Le corps humain est une machine extraordinaire. Le cœur bat environ cent mille fois par jour. Les poumons permettent de respirer et d'apporter l'oxygène au sang. Le cerveau contrôle toutes les fonctions du corps.",
+                "Les abeilles jouent un rôle crucial dans la nature. En butinant les fleurs, elles transportent le pollen d'une plante à l'autre. Ce processus, appelé pollinisation, permet aux plantes de se reproduire. Sans les abeilles, de nombreuses espèces végétales disparaîtraient.",
+                "La Terre tourne sur elle-même en vingt-quatre heures. C'est ce qui crée le jour et la nuit. Elle tourne également autour du Soleil en trois cent soixante-cinq jours. Cette révolution détermine les saisons.",
+                "Les fossiles sont les restes d'organismes vivants conservés dans les roches. Ils permettent aux scientifiques d'étudier les espèces disparues. Certains fossiles ont plusieurs millions d'années. Ils racontent l'histoire de la vie sur Terre.",
+                "L'électricité est une forme d'énergie que nous utilisons quotidiennement. Elle est produite dans des centrales puis transportée par des câbles. Elle alimente nos maisons, nos écoles et nos appareils électroniques.",
+                "Les océans couvrent plus de soixante-dix pour cent de la surface de notre planète. Ils abritent une biodiversité incroyable. Des milliers d'espèces y vivent, des plus petites aux plus grandes. Les océans régulent également le climat mondial.",
+                "Le système solaire est composé du Soleil et de huit planètes. Mercure est la plus proche du Soleil. Neptune est la plus éloignée. La Terre est la seule planète où l'on a trouvé de la vie.",
+                "Les fourmis vivent en colonies organisées comme de véritables sociétés. Chaque fourmi a un rôle précis : reine, ouvrière ou soldat. Elles communiquent entre elles grâce à des substances chimiques. Leur force collective est impressionnante.",
+                "L'ADN contient toutes les informations génétiques d'un être vivant. C'est comme un livre d'instructions qui détermine nos caractéristiques. Chaque personne possède un ADN unique, sauf les vrais jumeaux qui partagent le même.",
+                
+                // Histoire et patrimoine (15)
+                "Au Moyen Âge, les châteaux forts protégeaient les seigneurs et leurs familles. Ces imposantes forteresses étaient entourées de douves remplies d'eau. Des pont-levis permettaient d'entrer et de sortir. Les soldats surveillaient les environs depuis les hautes tours.",
+                "Les pyramides d'Égypte ont été construites il y a plus de quatre mille ans. Elles servaient de tombeaux aux pharaons. Des milliers d'ouvriers ont travaillé pendant des années pour les ériger. Aujourd'hui encore, on s'interroge sur les techniques utilisées.",
+                "Pendant la Renaissance, les artistes italiens ont révolutionné l'art européen. Léonard de Vinci était à la fois peintre, inventeur et scientifique. Michel-Ange a peint le plafond de la chapelle Sixtine. Cette période a marqué un tournant dans l'histoire culturelle.",
+                "Les Vikings étaient de redoutables navigateurs scandinaves. Ils parcouraient les mers sur leurs drakkars. Ils ont découvert l'Islande et le Groenland. Certains auraient même atteint l'Amérique bien avant Christophe Colomb.",
+                "La Révolution française a profondément transformé la société. Le peuple s'est soulevé contre la monarchie. La Déclaration des droits de l'homme a été adoptée. Ces événements ont influencé le monde entier.",
+                "Les Romains ont construit un immense empire autour de la Méditerranée. Ils ont développé des techniques de construction avancées. Leurs aqueducs transportaient l'eau sur de longues distances. Beaucoup de leurs réalisations sont encore visibles aujourd'hui.",
+                "L'invention de l'imprimerie par Gutenberg a révolutionné la diffusion du savoir. Avant cette invention, les livres étaient copiés à la main. Grâce à l'imprimerie, les connaissances sont devenues accessibles à un plus grand nombre.",
+                "Les grandes explorations du quinzième siècle ont changé la carte du monde. Les navigateurs cherchaient de nouvelles routes commerciales. Ils ont découvert des continents inconnus des Européens. Ces voyages ont favorisé les échanges entre les civilisations.",
+                "La Préhistoire désigne la période avant l'invention de l'écriture. Les hommes préhistoriques vivaient de la chasse et de la cueillette. Ils ont inventé le feu et fabriqué des outils. Ils ont laissé des peintures magnifiques dans les grottes.",
+                "Les châteaux de la Loire ont été construits à la Renaissance. Ils servaient de résidences royales. Leur architecture mêle élégance et raffinement. Ils attirent aujourd'hui des millions de visiteurs du monde entier.",
+                "L'Antiquité grecque a vu naître la démocratie à Athènes. Les citoyens participaient aux décisions politiques. Les Grecs ont également excellé dans les arts, la philosophie et les sciences. Leur héritage influence encore notre société moderne.",
+                "Les Gaulois occupaient le territoire de la France actuelle avant la conquête romaine. Ils vivaient dans des villages fortifiés appelés oppidums. Jules César les a conquis après de longues guerres. Vercingétorix fut leur chef le plus célèbre.",
+                "La guerre de Cent Ans a opposé la France et l'Angleterre pendant plus d'un siècle. Jeanne d'Arc, une jeune paysanne, a joué un rôle crucial. Elle a mené les armées françaises à plusieurs victoires. Son courage est resté dans les mémoires.",
+                "Les chevaliers suivaient un code d'honneur strict appelé la chevalerie. Ils devaient protéger les faibles et servir leur seigneur. Ils participaient à des tournois pour prouver leur bravoure. Leur armure pesait plusieurs dizaines de kilos.",
+                "L'invention de la roue a été une révolution majeure. Elle a facilité le transport des marchandises. Les chars et les chariots sont devenus possibles. Cette invention remonte à plus de cinq mille ans.",
+                
+                // Récits d'aventure et imagination (20)
+                "L'explorateur avançait prudemment dans la jungle dense. Des lianes pendaient des arbres centenaires. Il cherchait les ruines d'une cité perdue depuis des siècles. Soudain, il aperçut une construction de pierre envahie par la végétation.",
+                "Le vieux phare se dressait fièrement face aux vagues déchaînées. Depuis des générations, il guidait les navires vers le port. Le gardien montait chaque soir allumer la lanterne. Par temps de tempête, sa lumière était l'unique espoir des marins.",
+                "Dans l'atelier du luthier, une odeur de bois fraîchement coupé flottait dans l'air. L'artisan façonnait avec patience chaque partie du violon. Il fallait des mois de travail minutieux. Chaque instrument était une œuvre d'art unique.",
+                "Le train traversait des paysages de montagnes enneigées. Les passagers admiraient la vue depuis les fenêtres panoramiques. Le contrôleur annonça l'arrivée imminente dans la station d'altitude. C'était le début d'une aventure hivernale.",
+                "Au marché aux épices, mille parfums se mêlaient dans l'air chaud. Les marchands vantaient leurs produits venus du monde entier. Des pyramides colorées de safran, de curcuma et de paprika attiraient l'œil. C'était un festival pour les sens.",
+                "L'archéologue brossait délicatement la poterie qu'elle venait de découvrir. Chaque fragment révélait des motifs anciens. Cette trouvaille pouvait changer la compréhension d'une civilisation disparue. Elle documentait minutieusement chaque détail.",
+                "Le cirque s'installait sur la place du village. Les acrobates répétaient leurs numéros sous le chapiteau coloré. Les clowns préparaient leurs farces. Le soir même, le spectacle émerveillerait petits et grands.",
+                "Dans le laboratoire, le scientifique observait les résultats de son expérience. Il avait travaillé des années sur ce projet. Les données s'affichaient sur les écrans. Il touchait peut-être au but de sa recherche.",
+                "Le marathon commençait dans quelques minutes. Des milliers de coureurs s'échauffaient sur la ligne de départ. Certains visaient la performance, d'autres voulaient simplement terminer. L'atmosphère était électrique.",
+                "La bibliothèque ancienne contenait des milliers d'ouvrages rares. Des escaliers en colimaçon menaient aux étages supérieurs. Le silence n'était rompu que par le bruissement des pages. C'était un temple du savoir.",
+                "L'alpiniste approchait du sommet après des heures d'escalade. Le froid était intense et l'oxygène se raréfiait. Chaque pas demandait un effort considérable. Mais la vue depuis le sommet valait tous les sacrifices.",
+                "Le potier faisait tourner son tour avec expertise. L'argile prenait forme sous ses mains habiles. Il créait des vases, des bols et des assiettes. Chaque pièce était ensuite cuite dans un four à haute température.",
+                "Dans la serre tropicale, l'humidité et la chaleur étaient oppressantes. Des plantes exotiques poussaient luxuriantes. Des papillons colorés voletaient entre les fleurs. C'était un petit coin de forêt amazonienne en pleine ville.",
+                "Le forgeron martelait le métal rougi au feu. Des étincelles jaillissaient à chaque coup. Il fabriquait des outils et des objets décoratifs. Son savoir-faire se transmettait depuis des générations.",
+                "La danseuse répétait inlassablement les mêmes mouvements. Chaque geste devait être parfait pour le spectacle. Des années d'entraînement quotidien l'avaient menée jusqu'ici. Sur scène, elle semblerait danser sans effort.",
+                "Le restaurateur préparait avec soin chaque plat. Il sélectionnait les meilleurs ingrédients du marché. Sa cuisine mariait tradition et créativité. Les clients venaient de loin pour goûter ses spécialités.",
+                "Dans l'observatoire, l'astronome pointait le télescope vers une galaxie lointaine. La lumière des étoiles avait voyagé pendant des millions d'années. Chaque nuit d'observation révélait de nouveaux mystères de l'univers.",
+                "Le menuisier sculptait le bois avec délicatesse. Il créait des meubles qui dureraient des décennies. Le parfum du chêne et du pin embaumait l'atelier. Son travail alliait robustesse et beauté.",
+                "La journaliste enquêtait sur une affaire complexe. Elle interrogeait des témoins et vérifiait chaque information. Son article devait être précis et équilibré. La vérité était son seul objectif.",
+                "Le pilote vérifiait tous les instruments avant le décollage. La tour de contrôle donnait les dernières instructions. Les passagers attachaient leurs ceintures. L'avion allait bientôt s'élancer vers le ciel."
+            ]
+        };
+
+        let currentDifficulty = 'facile';
+        let currentText = '';
+        let currentWords = [];
+        let currentTextId = null; // ID unique du texte
+        let currentTextType = 'nouveau'; // 'evaluation', 'nouveau', 'revision'
+        let recognition = null;
+        let isRecording = false;
+        let startTime = null;
+        let sessionData = {
+            wordsRead: 0,
+            correctWords: 0,
+            totalWords: 0,
+            difficulty: '',
+            transcript: '',
+            textId: null,
+            textType: ''
+        };
+
+        // Textes de référence pour l'évaluation (3 par niveau)
+        const evaluationTexts = {
+            facile: [0, 10, 25], // Indices des textes d'évaluation
+            moyen: [0, 15, 30],
+            difficile: [0, 15, 30]
+        };
+
+        // Gestion de l'état des textes
+        function getTextState() {
+            const state = localStorage.getItem('textState');
+            if (!state) {
+                return {
+                    usedTexts: { facile: [], moyen: [], difficile: [] },
+                    difficultTexts: { facile: [], moyen: [], difficile: [] },
+                    lastEvaluationDate: null,
+                    textHistory: []
+                };
+            }
+            return JSON.parse(state);
+        }
+
+        function saveTextState(state) {
+            localStorage.setItem('textState', JSON.stringify(state));
+        }
+
+        function shouldRunEvaluation() {
+            const state = getTextState();
+            const history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
+            
+            // Évaluation tous les 10 textes OU si aucune évaluation depuis 15 jours
+            const lastEval = state.lastEvaluationDate ? new Date(state.lastEvaluationDate) : null;
+            const daysSinceLastEval = lastEval ? Math.floor((Date.now() - lastEval.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+            
+            const sessionsCount = history.filter(h => h.difficulty === currentDifficulty).length;
+            const sessionsSinceLastEval = sessionsCount % 10;
+            
+            return daysSinceLastEval >= 15 || sessionsSinceLastEval === 0;
+        }
+
+        function selectText() {
+            const state = getTextState();
+            const textsArray = texts[currentDifficulty];
+            const evalTexts = evaluationTexts[currentDifficulty];
+            const usedTexts = state.usedTexts[currentDifficulty] || [];
+            const difficultTexts = state.difficultTexts[currentDifficulty] || [];
+            
+            let selectedIndex;
+            let textType;
+            
+            // 1. Vérifier si c'est le moment d'une évaluation
+            if (shouldRunEvaluation()) {
+                // Choisir un texte d'évaluation aléatoire
+                selectedIndex = evalTexts[Math.floor(Math.random() * evalTexts.length)];
+                textType = 'evaluation';
+                state.lastEvaluationDate = new Date().toISOString();
+            }
+            // 2. Vérifier s'il y a des textes difficiles à revoir (15% de probabilité)
+            else if (difficultTexts.length > 0 && Math.random() < 0.15) {
+                // Choisir un texte difficile à revoir
+                const eligibleDifficult = difficultTexts.filter(dt => {
+                    const daysSince = Math.floor((Date.now() - new Date(dt.lastAttempt).getTime()) / (1000 * 60 * 60 * 24));
+                    return daysSince >= 7; // Au moins 7 jours depuis la dernière tentative
+                });
+                
+                if (eligibleDifficult.length > 0) {
+                    const selected = eligibleDifficult[Math.floor(Math.random() * eligibleDifficult.length)];
+                    selectedIndex = selected.textId;
+                    textType = 'revision';
+                } else {
+                    // Si aucun texte difficile éligible, prendre un nouveau
+                    selectedIndex = selectNewText(textsArray, usedTexts, evalTexts);
+                    textType = 'nouveau';
+                }
+            }
+            // 3. Sinon, prendre un nouveau texte
+            else {
+                selectedIndex = selectNewText(textsArray, usedTexts, evalTexts);
+                textType = 'nouveau';
+            }
+            
+            saveTextState(state);
+            return { index: selectedIndex, type: textType };
+        }
+
+        function selectNewText(textsArray, usedTexts, evalTexts) {
+            // Filtrer les textes disponibles (ni utilisés, ni d'évaluation)
+            const availableTexts = textsArray
+                .map((_, index) => index)
+                .filter(i => !usedTexts.includes(i) && !evalTexts.includes(i));
+            
+            if (availableTexts.length === 0) {
+                // Tous les textes ont été utilisés, réinitialiser
+                const state = getTextState();
+                state.usedTexts[currentDifficulty] = [];
+                saveTextState(state);
+                return selectNewText(textsArray, [], evalTexts);
+            }
+            
+            return availableTexts[Math.floor(Math.random() * availableTexts.length)];
+        }
+
+        function markTextAsUsed(textId, accuracy) {
+            const state = getTextState();
+            
+            // Marquer comme utilisé
+            if (!state.usedTexts[currentDifficulty].includes(textId)) {
+                state.usedTexts[currentDifficulty].push(textId);
+            }
+            
+            // Si précision < 70%, ajouter aux textes difficiles
+            if (accuracy < 70) {
+                const existingDifficult = state.difficultTexts[currentDifficulty].find(dt => dt.textId === textId);
+                if (existingDifficult) {
+                    existingDifficult.attempts++;
+                    existingDifficult.lastAttempt = new Date().toISOString();
+                    existingDifficult.lastAccuracy = accuracy;
+                } else {
+                    state.difficultTexts[currentDifficulty].push({
+                        textId: textId,
+                        attempts: 1,
+                        lastAttempt: new Date().toISOString(),
+                        lastAccuracy: accuracy
+                    });
+                }
+            } else if (accuracy >= 85) {
+                // Si bien réussi (≥85%), retirer des textes difficiles
+                state.difficultTexts[currentDifficulty] = state.difficultTexts[currentDifficulty]
+                    .filter(dt => dt.textId !== textId);
+            }
+            
+            // Historique des textes
+            state.textHistory.push({
+                textId: textId,
+                difficulty: currentDifficulty,
+                date: new Date().toISOString(),
+                accuracy: accuracy,
+                type: currentTextType
+            });
+            
+            // Garder seulement les 100 derniers
+            if (state.textHistory.length > 100) {
+                state.textHistory = state.textHistory.slice(-100);
+            }
+            
+            saveTextState(state);
+        }
+
+        // Initialisation
+        window.addEventListener('load', () => {
+            loadNewText();
+            loadHistory();
+            updateStats();
+            updateProgressCharts();
+            
+            // Afficher la bannière d'avertissement
+            document.getElementById('permissionBanner').style.display = 'block';
+            
+            // Vérifier la compatibilité de la reconnaissance vocale
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('⚠️ ATTENTION : Reconnaissance vocale non disponible\n\n' +
+                      'Ton navigateur ne supporte pas la reconnaissance vocale.\n\n' +
+                      'Pour utiliser cette application, tu dois utiliser :\n' +
+                      '• Chrome sur Android\n' +
+                      '• Safari sur iPhone/iPad\n' +
+                      '• Chrome ou Edge sur ordinateur\n\n' +
+                      'Firefox ne supporte pas cette fonctionnalité.');
+            }
+            
+            detectBrowserAndShowInstructions();
+        });
+
+        function detectBrowserAndShowInstructions() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            let browserInfo = '';
+            
+            if (userAgent.includes('chrome') && !userAgent.includes('edge')) {
+                browserInfo = '✅ Navigateur détecté : Chrome\n\n' +
+                              'Quand tu cliques sur "Tester mon microphone" :\n' +
+                              '1. Une popup apparaît EN HAUT de la page\n' +
+                              '2. Elle demande "Autoriser l\'accès au microphone"\n' +
+                              '3. Clique sur "Autoriser" ou "Allow"\n\n' +
+                              'Si tu ne vois pas la popup :\n' +
+                              '• Regarde l\'icône 🎤 barrée dans la barre d\'adresse\n' +
+                              '• Clique dessus et active le microphone';
+            } else if (userAgent.includes('safari') && !userAgent.includes('chrome')) {
+                browserInfo = '✅ Navigateur détecté : Safari\n\n' +
+                              'Sur Safari, l\'autorisation apparaît en haut de l\'écran.\n' +
+                              'Assure-toi d\'avoir autorisé Safari à accéder au micro dans les Réglages de ton iPhone/iPad.';
+            } else if (userAgent.includes('edge')) {
+                browserInfo = '✅ Navigateur détecté : Edge\n\n' +
+                              'Une popup apparaîtra en haut demandant l\'autorisation.\n' +
+                              'Clique sur "Autoriser".';
+            } else if (userAgent.includes('firefox')) {
+                browserInfo = '⚠️ Firefox détecté\n\n' +
+                              'ATTENTION : Firefox ne supporte pas bien la reconnaissance vocale en français.\n\n' +
+                              'Utilise plutôt Chrome ou Edge pour cette application.';
+            }
+            
+            console.log(browserInfo);
+        }
+
+        // Fonction de test du microphone
+        async function testMicrophone() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            let instructionMsg = '🎤 Test du microphone\n\n';
+            
+            if (userAgent.includes('chrome')) {
+                instructionMsg += '1. Une popup va apparaître EN HAUT de cette page\n';
+                instructionMsg += '2. Cherche l\'icône 🎤 dans la barre d\'adresse\n';
+                instructionMsg += '3. Clique sur "Autoriser" ou "Allow"\n\n';
+                instructionMsg += '⚠️ Si tu ne vois rien :\n';
+                instructionMsg += '• Regarde tout en haut de la fenêtre\n';
+                instructionMsg += '• Clique sur l\'icône 🎤 barrée à côté de l\'adresse';
+            } else if (userAgent.includes('safari')) {
+                instructionMsg += 'Une demande d\'autorisation va apparaître.\n\n';
+                instructionMsg += 'Si rien n\'apparaît :\n';
+                instructionMsg += '• Va dans Réglages > Safari > Microphone\n';
+                instructionMsg += '• Autorise l\'accès au microphone';
+            } else {
+                instructionMsg += 'Clique sur "Autoriser" quand la popup apparaît en haut.';
+            }
+            
+            instructionMsg += '\n\nClique sur OK pour commencer le test.';
+            
+            alert(instructionMsg);
+            
+            try {
+                console.log('Demande d\'accès au microphone...');
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                console.log('✅ Accès au microphone obtenu');
+                
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                const microphone = audioContext.createMediaStreamSource(stream);
+                
+                microphone.connect(analyser);
+                analyser.fftSize = 256;
+                
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                
+                let maxVolume = 0;
+                const testDuration = 2000;
+                const startTest = Date.now();
+                
+                const checkVolume = () => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                    if (average > maxVolume) maxVolume = average;
+                    
+                    if (Date.now() - startTest < testDuration) {
+                        requestAnimationFrame(checkVolume);
+                    } else {
+                        stream.getTracks().forEach(track => track.stop());
+                        audioContext.close();
+                        
+                        if (maxVolume > 10) {
+                            alert('✅ MICROPHONE FONCTIONNEL !\n\n' +
+                                  '• Niveau détecté : ' + Math.round(maxVolume) + '/255\n' +
+                                  '• Le microphone capte bien du son\n\n' +
+                                  'Tu peux maintenant commencer la lecture.\n\n' +
+                                  '💡 Conseils :\n' +
+                                  '• Parle clairement\n' +
+                                  '• Reste dans un endroit calme\n' +
+                                  '• Tiens-toi près du micro');
+                        } else {
+                            alert('⚠️ Microphone détecté mais très peu de son capté.\n\n' +
+                                  'Niveau : ' + Math.round(maxVolume) + '/255\n\n' +
+                                  'Vérifie que :\n' +
+                                  '• Le micro n\'est pas en mode muet\n' +
+                                  '• Tu parles assez fort\n' +
+                                  '• Le bon micro est sélectionné\n\n' +
+                                  'Essaie de dire "bonjour" et recommence le test.');
+                        }
+                    }
+                };
+                
+                alert('🎤 Test en cours...\n\nDis "BONJOUR" ou "HELLO" maintenant !\n\nLe test dure 2 secondes.');
+                
+                checkVolume();
+                
+            } catch (error) {
+                console.error('❌ Erreur de test micro:', error);
+                
+                let errorMessage = '❌ PROBLÈME DÉTECTÉ :\n\n';
+                
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMessage += '🚫 Permission refusée\n\n';
+                    errorMessage += 'Tu as bloqué l\'accès au microphone.\n\n';
+                    errorMessage += 'SOLUTION :\n';
+                    
+                    if (userAgent.includes('chrome')) {
+                        errorMessage += '1. Clique sur l\'icône 🎤 ou 🔒 à gauche de l\'adresse\n';
+                        errorMessage += '2. Trouve "Microphone"\n';
+                        errorMessage += '3. Change de "Bloquer" à "Autoriser"\n';
+                        errorMessage += '4. Recharge la page (F5)\n';
+                        errorMessage += '5. Clique à nouveau sur "Tester mon microphone"';
+                    } else if (userAgent.includes('safari')) {
+                        errorMessage += '1. Va dans Safari > Réglages pour ce site web\n';
+                        errorMessage += '2. Autorise le microphone\n';
+                        errorMessage += '3. Recharge la page';
+                    } else {
+                        errorMessage += '1. Cherche l\'icône de permission dans la barre d\'adresse\n';
+                        errorMessage += '2. Autorise le microphone\n';
+                        errorMessage += '3. Recharge la page';
+                    }
+                    
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMessage += '🎤 Aucun microphone détecté\n\n';
+                    errorMessage += 'SOLUTIONS :\n';
+                    errorMessage += '• Vérifie qu\'un micro est bien connecté\n';
+                    errorMessage += '• Sur téléphone : vérifie que le micro n\'est pas bouché\n';
+                    errorMessage += '• Essaie avec des écouteurs avec micro\n';
+                    errorMessage += '• Redémarre ton appareil';
+                    
+                } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+                    errorMessage += '⚠️ Microphone occupé\n\n';
+                    errorMessage += 'Une autre application utilise le micro.\n\n';
+                    errorMessage += 'SOLUTIONS :\n';
+                    errorMessage += '• Ferme les autres apps (Zoom, Teams, etc.)\n';
+                    errorMessage += '• Ferme les autres onglets du navigateur\n';
+                    errorMessage += '• Redémarre le navigateur';
+                    
+                } else {
+                    errorMessage += 'Erreur : ' + error.name + '\n';
+                    errorMessage += error.message + '\n\n';
+                    errorMessage += 'Essaie de :\n';
+                    errorMessage += '• Recharger la page\n';
+                    errorMessage += '• Redémarrer le navigateur\n';
+                    errorMessage += '• Utiliser Chrome ou Safari';
+                }
+                
+                alert(errorMessage);
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'progres') {
+                updateProgressCharts();
+            } else if (tabName === 'resultats') {
+                updateStats();
+            }
+        }
+
+        function selectDifficulty(level) {
+            currentDifficulty = level;
+            document.querySelectorAll('.difficulty-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            loadNewText();
+        }
+
+        function loadNewText() {
+            const selection = selectText();
+            const textsArray = texts[currentDifficulty];
+            
+            currentTextId = selection.index;
+            currentTextType = selection.type;
+            currentText = textsArray[currentTextId];
+            currentWords = currentText.split(' ');
+            
+            const textDiv = document.getElementById('textToRead');
+            textDiv.innerHTML = currentWords.map((word, i) => 
+                `<span class="word" id="word-${i}">${word}</span>`
+            ).join(' ');
+
+            // Afficher le type de texte
+            let typeLabel = '';
+            let typeColor = '';
+            if (currentTextType === 'evaluation') {
+                typeLabel = '📊 Texte d\'évaluation';
+                typeColor = '#0066cc';
+            } else if (currentTextType === 'revision') {
+                typeLabel = '🔄 Texte à retravailler';
+                typeColor = '#ff9800';
+            } else {
+                typeLabel = '✨ Nouveau texte';
+                typeColor = '#28a745';
+            }
+            
+            const typeIndicator = document.createElement('div');
+            typeIndicator.style.cssText = `
+                background: ${typeColor}15;
+                border-left: 4px solid ${typeColor};
+                padding: 10px 15px;
+                border-radius: 6px;
+                margin-bottom: 15px;
+                color: ${typeColor};
+                font-weight: 600;
+            `;
+            typeIndicator.textContent = typeLabel;
+            
+            textDiv.parentElement.insertBefore(typeIndicator, textDiv);
+
+            document.getElementById('currentResults').style.display = 'none';
+            sessionData = {
+                wordsRead: 0,
+                correctWords: 0,
+                totalWords: currentWords.length,
+                difficulty: currentDifficulty,
+                transcript: '',
+                textId: currentTextId,
+                textType: currentTextType
+            };
+        }
+
+        async function startReading() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                alert('⚠️ La reconnaissance vocale n\'est pas disponible sur ce navigateur.\n\nUtilisez Chrome, Edge ou Safari pour cette fonctionnalité.');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+                recognition.lang = 'fr-FR';
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.maxAlternatives = 1;
+
+                startTime = Date.now();
+                isRecording = true;
+
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('stopBtn').disabled = false;
+                document.getElementById('recordingIndicator').classList.add('active');
+
+                let finalTranscript = '';
+
+                recognition.onstart = () => {
+                    console.log('🎤 Reconnaissance vocale démarrée');
+                };
+
+                recognition.onresult = (event) => {
+                    let interimTranscript = '';
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                            console.log('Texte reconnu:', transcript);
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+
+                    sessionData.transcript = finalTranscript.trim();
+                    analyzeReading(finalTranscript.toLowerCase());
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Erreur de reconnaissance:', event.error);
+                    
+                    let errorMessage = '';
+                    switch(event.error) {
+                        case 'no-speech':
+                            errorMessage = '🎤 Aucune parole détectée.\n\nAssure-toi de parler assez fort et que ton microphone fonctionne.';
+                            break;
+                        case 'audio-capture':
+                            errorMessage = '🎤 Impossible d\'accéder au microphone.\n\nVérifie que :\n- Le microphone est bien connecté\n- Tu as autorisé l\'accès au micro\n- Aucune autre app n\'utilise le micro';
+                            break;
+                        case 'not-allowed':
+                            errorMessage = '🚫 Permission refusée.\n\nTu dois autoriser l\'accès au microphone pour utiliser cette fonctionnalité.\n\nRecharge la page et clique sur "Autoriser" quand demandé.';
+                            isRecording = false;
+                            document.getElementById('startBtn').disabled = false;
+                            document.getElementById('stopBtn').disabled = true;
+                            document.getElementById('recordingIndicator').classList.remove('active');
+                            break;
+                        case 'network':
+                            errorMessage = '🌐 Erreur réseau.\n\nLa reconnaissance vocale nécessite une connexion internet.';
+                            break;
+                        default:
+                            errorMessage = `⚠️ Erreur: ${event.error}\n\nEssaie de recharger la page.`;
+                    }
+                    
+                    if (errorMessage && event.error !== 'no-speech') {
+                        alert(errorMessage);
+                    }
+                };
+
+                recognition.onend = () => {
+                    console.log('Reconnaissance terminée');
+                    if (isRecording) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.error('Erreur lors du redémarrage:', e);
+                        }
+                    }
+                };
+
+                recognition.start();
+                
+            } catch (error) {
+                console.error('Erreur d\'accès au microphone:', error);
+                
+                let errorMessage = '🎤 Impossible d\'accéder au microphone.\n\n';
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Tu as refusé l\'accès au microphone.\n\nRecharge la page et clique sur "Autoriser" quand ton navigateur te le demande.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'Aucun microphone détecté.\n\nVérifie qu\'un microphone est bien connecté à ton appareil.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage += 'Le microphone est peut-être utilisé par une autre application.\n\nFerme les autres apps qui utilisent le micro et réessaie.';
+                } else {
+                    errorMessage += 'Erreur: ' + error.message;
+                }
+                
+                alert(errorMessage);
+            }
+        }
+
+        function stopReading() {
+            isRecording = false;
+            if (recognition) {
+                recognition.stop();
+            }
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('recordingIndicator').classList.remove('active');
+
+            calculateResults();
+            saveSession();
+            displayResults();
+        }
+
+        function analyzeReading(spokenText) {
+            const spokenWords = spokenText.split(/\s+/).filter(w => w.length > 0);
+            const textWords = currentWords.map(w => w.toLowerCase().replace(/[.,!?;:«»'"]/g, ''));
+            
+            let matchCount = 0;
+            
+            const normalizedSpoken = spokenWords.map(w => w.replace(/[.,!?;:«»'"]/g, ''));
+            
+            textWords.forEach((word, index) => {
+                const wordElement = document.getElementById(`word-${index}`);
+                
+                const isMatched = normalizedSpoken.some(spoken => {
+                    if (spoken === word) return true;
+                    
+                    if (spoken.includes(word) && word.length > 3) return true;
+                    if (word.includes(spoken) && spoken.length > 3) return true;
+                    
+                    const maxDistance = word.length <= 4 ? 1 : Math.floor(word.length / 4);
+                    if (levenshteinDistance(spoken, word) <= maxDistance) return true;
+                    
+                    if (word.length > 4 && spoken.length > 4) {
+                        if (word.substring(0, 4) === spoken.substring(0, 4)) return true;
+                    }
+                    
+                    return false;
+                });
+                
+                if (isMatched) {
+                    wordElement.classList.add('correct');
+                    wordElement.classList.remove('incorrect');
+                    matchCount++;
+                } else if (normalizedSpoken.length > index) {
+                    wordElement.classList.add('incorrect');
+                    wordElement.classList.remove('correct');
+                }
+            });
+
+            sessionData.wordsRead = spokenWords.length;
+            sessionData.correctWords = matchCount;
+            
+            console.log(`Mots reconnus: ${matchCount}/${textWords.length} (${Math.round(matchCount/textWords.length*100)}%)`);
+        }
+
+        function levenshteinDistance(a, b) {
+            const matrix = [];
+            
+            for (let i = 0; i <= b.length; i++) {
+                matrix[i] = [i];
+            }
+            
+            for (let j = 0; j <= a.length; j++) {
+                matrix[0][j] = j;
+            }
+            
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+            
+            return matrix[b.length][a.length];
+        }
+
+        function calculateResults() {
+            sessionData.accuracy = sessionData.totalWords > 0 
+                ? Math.round((sessionData.correctWords / sessionData.totalWords) * 100) 
+                : 0;
+            
+            sessionData.date = new Date().toISOString();
+            
+            // Marquer le texte comme utilisé et gérer les difficultés
+            markTextAsUsed(currentTextId, sessionData.accuracy);
+        }
+
+        function displayResults() {
+            const resultsDiv = document.getElementById('sessionResults');
+            const accuracy = sessionData.accuracy;
+            
+            let feedback = '';
+            let feedbackClass = '';
+            let tips = [];
+
+            if (accuracy >= 90) {
+                feedback = '🎉 Excellent ! La plupart des mots ont été bien reconnus !';
+                feedbackClass = 'feedback-positive';
+                tips = [
+                    'Excellente reconnaissance des mots',
+                    'Tu peux essayer un niveau plus difficile',
+                    'Continue à lire régulièrement'
+                ];
+            } else if (accuracy >= 75) {
+                feedback = '👍 Très bon travail ! Bonne reconnaissance globale.';
+                feedbackClass = 'feedback-positive';
+                tips = [
+                    'La majorité des mots ont été reconnus',
+                    'Regarde les mots en rouge : ce sont ceux à travailler',
+                    'Essaye de bien articuler ces mots difficiles'
+                ];
+            } else if (accuracy >= 60) {
+                feedback = '💪 Bon début ! Certains mots posent encore des difficultés.';
+                feedbackClass = 'feedback-warning';
+                tips = [
+                    'Les mots en rouge sont ceux qui n\'ont pas été bien captés',
+                    'Articule bien chaque syllabe',
+                    'Relis le texte en te concentrant sur les mots difficiles',
+                    'Note : le micro peut aussi avoir manqué certains mots'
+                ];
+            } else {
+                feedback = '🌟 Continue ! Le micro a eu du mal à capter beaucoup de mots.';
+                feedbackClass = 'feedback-warning';
+                tips = [
+                    'Vérifie que le microphone fonctionne bien',
+                    'Parle plus fort et articule davantage',
+                    'Élimine les bruits de fond',
+                    'Lis plus lentement en prononçant bien',
+                    'Un score faible peut venir du micro, pas forcément de ta lecture !'
+                ];
+            }
+
+            // Identifier les mots non reconnus
+            const missedWords = [];
+            currentWords.forEach((word, index) => {
+                const wordElement = document.getElementById(`word-${index}`);
+                if (wordElement && wordElement.classList.contains('incorrect')) {
+                    missedWords.push(word);
+                }
+            });
+
+            resultsDiv.innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Mots reconnus correctement :</span>
+                    <span class="metric-value">${sessionData.correctWords} / ${sessionData.totalWords}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Taux de précision :</span>
+                    <span class="metric-value">${accuracy}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${accuracy}%">${accuracy}%</div>
+                </div>
+                
+                ${missedWords.length > 0 ? `
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #ffc107;">
+                    <h4 style="color: #856404; margin-bottom: 10px;">🎯 Mots à retravailler :</h4>
+                    <p style="color: #856404; font-weight: 600;">${missedWords.join(', ')}</p>
+                </div>
+                ` : ''}
+                
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #0066cc;">
+                    <p style="color: #0066cc; font-size: 14px; margin: 0;">
+                        <strong>ℹ️ Important :</strong> La précision mesure quels mots ont été reconnus par le microphone. 
+                        Les mots en <span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">vert</span> ont été bien captés, 
+                        ceux en <span style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">rouge</span> sont à retravailler 
+                        (ou n'ont pas été bien captés par le micro).
+                    </p>
+                </div>
+                
+                <div class="feedback ${feedbackClass}" style="margin-top: 20px;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">${feedback}</h4>
+                </div>
+                
+                <div class="tips">
+                    <h4>💡 Observations :</h4>
+                    <ul>
+                        ${tips.map(tip => `<li>${tip}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+
+            document.getElementById('currentResults').style.display = 'block';
+            updateStats();
+        }
+
+        function saveSession() {
+            let history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
+            history.push(sessionData);
+            localStorage.setItem('readingHistory', JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
+            const historyDiv = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                historyDiv.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📚</div>
+                        <p>Aucune séance enregistrée pour le moment.</p>
+                        <p style="margin-top: 10px; color: #666;">Commence une lecture pour voir tes progrès ici !</p>
+                    </div>
+                `;
+                return;
+            }
+
+            historyDiv.innerHTML = history.slice().reverse().map((session, index) => {
+                const realIndex = history.length - 1 - index;
+                const date = new Date(session.date);
+                const difficultyLabel = {
+                    'facile': '⭐ Facile',
+                    'moyen': '⭐⭐ Moyen',
+                    'difficile': '⭐⭐⭐ Difficile'
+                }[session.difficulty];
+
+                const typeLabel = {
+                    'evaluation': '📊 Évaluation',
+                    'revision': '🔄 Révision',
+                    'nouveau': '✨ Nouveau'
+                }[session.textType] || '✨ Nouveau';
+
+                const typeColor = {
+                    'evaluation': '#0066cc',
+                    'revision': '#ff9800',
+                    'nouveau': '#28a745'
+                }[session.textType] || '#28a745';
+
+                return `
+                    <div class="history-item">
+                        <h4>${date.toLocaleDateString('fr-FR')} - ${date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}</h4>
+                        <p><strong>Niveau :</strong> ${difficultyLabel} | <span style="color: ${typeColor}; font-weight: 600;">${typeLabel}</span></p>
+                        <p><strong>Précision :</strong> ${session.accuracy}% (${session.correctWords}/${session.totalWords} mots reconnus)</p>
+                        <button class="btn btn-danger" onclick="deleteSession(${realIndex})" style="margin-top: 10px; padding: 8px 15px; font-size: 14px;">
+                            🗑️ Supprimer cette séance
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function deleteSession(index) {
+            if (confirm('Voulez-vous vraiment supprimer cette séance ?\n\nCette action est irréversible.')) {
+                let history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
+                history.splice(index, 1);
+                localStorage.setItem('readingHistory', JSON.stringify(history));
+                loadHistory();
+                updateStats();
+                updateProgressCharts();
+                alert('✅ Séance supprimée avec succès !');
+            }
+        }
+
+        function updateStats() {
+            const history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
+            
+            if (history.length === 0) {
+                document.getElementById('overallStats').innerHTML = `
+                    <div class="empty-state" style="grid-column: 1 / -1;">
+                        <div class="empty-state-icon">📊</div>
+                        <p>Commence à lire pour voir tes statistiques !</p>
+                    </div>
+                `;
+                document.getElementById('lastSessionDetails').innerHTML = '';
+                return;
+            }
+
+            const totalSessions = history.length;
+            const avgAccuracy = Math.round(
+                history.reduce((sum, s) => sum + s.accuracy, 0) / totalSessions
+            );
+            const lastSession = history[history.length - 1];
+
+            document.getElementById('overallStats').innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-number">${totalSessions}</div>
+                    <div class="stat-label">Séances</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">${avgAccuracy}%</div>
+                    <div class="stat-label">Précision moyenne</div>
+                </div>
+            `;
+
+            const difficultyLabel = {
+                'facile': '⭐ Facile',
+                'moyen': '⭐⭐ Moyen',
+                'difficile': '⭐⭐⭐ Difficile'
+            }[lastSession.difficulty];
+
+            document.getElementById('lastSessionDetails').innerHTML = `
+                <div class="results-card" style="margin-top: 20px;">
+                    <h3>📖 Dernière séance</h3>
+                    <div class="metric">
+                        <span class="metric-label">Date :</span>
+                        <span class="metric-value">${new Date(lastSession.date).toLocaleString('fr-FR')}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Niveau :</span>
+                        <span class="metric-value">${difficultyLabel}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Précision :</span>
+                        <span class="metric-value">${lastSession.accuracy}%</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        let progressChart = null;
+        let evaluationChart = null;
+        let textTypeChart = null;
+
+        function updateProgressCharts() {
+            const history = JSON.parse(localStorage.getItem('readingHistory') || '[]');
+            
+            if (history.length === 0) {
+                return;
+            }
+
+            // Graphique d'évolution générale
+            const ctx1 = document.getElementById('progressChart').getContext('2d');
+            
+            if (progressChart) progressChart.destroy();
+
+            const dates = history.map(s => new Date(s.date).toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'}));
+            
+            progressChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Précision (%)',
+                            data: history.map(s => s.accuracy),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 10
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            // Graphique spécifique aux textes d'évaluation
+            const evalHistory = history.filter(s => s.textType === 'evaluation');
+            if (evalHistory.length > 0) {
+                const ctx2 = document.getElementById('evaluationChart').getContext('2d');
+                
+                if (evaluationChart) evaluationChart.destroy();
+
+                const evalDates = evalHistory.map(s => new Date(s.date).toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit'}));
+                
+                evaluationChart = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: evalDates,
+                        datasets: [
+                            {
+                                label: 'Précision sur textes de référence',
+                                data: evalHistory.map(s => s.accuracy),
+                                borderColor: '#0066cc',
+                                backgroundColor: 'rgba(0, 102, 204, 0.2)',
+                                tension: 0.4,
+                                fill: true,
+                                pointRadius: 6,
+                                pointHoverRadius: 8
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 10
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Graphique de répartition par type
+            const ctx3 = document.getElementById('textTypeChart').getContext('2d');
+            
+            if (textTypeChart) textTypeChart.destroy();
+
+            const typeCounts = {
+                evaluation: history.filter(s => s.textType === 'evaluation').length,
+                nouveau: history.filter(s => s.textType === 'nouveau').length,
+                revision: history.filter(s => s.textType === 'revision').length
+            };
+
+            textTypeChart = new Chart(ctx3, {
+                type: 'doughnut',
+                data: {
+                    labels: ['📊 Évaluation', '✨ Nouveaux', '🔄 Révisions'],
+                    datasets: [{
+                        data: [typeCounts.evaluation, typeCounts.nouveau, typeCounts.revision],
+                        backgroundColor: [
+                            'rgba(0, 102, 204, 0.6)',
+                            'rgba(40, 167, 69, 0.6)',
+                            'rgba(255, 152, 0, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(0, 102, 204, 1)',
+                            'rgba(40, 167, 69, 1)',
+                            'rgba(255, 152, 0, 1)'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Liste des textes difficiles
+            updateDifficultTextsList();
+        }
+
+        function updateDifficultTextsList() {
+            const state = getTextState();
+            const difficultTexts = state.difficultTexts[currentDifficulty] || [];
+            const listDiv = document.getElementById('difficultTextsList');
+
+            if (difficultTexts.length === 0) {
+                listDiv.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #28a745;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+                        <p style="font-weight: 600;">Aucun texte en difficulté !</p>
+                        <p style="color: #666; font-size: 14px; margin-top: 5px;">Tous les textes sont bien maîtrisés.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listDiv.innerHTML = difficultTexts.map(dt => {
+                const daysSince = Math.floor((Date.now() - new Date(dt.lastAttempt).getTime()) / (1000 * 60 * 60 * 24));
+                const canRetry = daysSince >= 7;
+
+                return `
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #ff9800;">
+                        <p style="color: #666; font-size: 14px; margin-bottom: 5px;">
+                            Texte #${dt.textId + 1} - Dernière tentative : ${dt.lastAccuracy}%
+                        </p>
+                        <p style="color: #666; font-size: 12px;">
+                            ${canRetry ? 
+                                '✅ Prêt à être retravaillé' : 
+                                `⏳ À revoir dans ${7 - daysSince} jour(s)`
+                            }
+                        </p>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
